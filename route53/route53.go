@@ -64,7 +64,9 @@ type CreateHostedZoneRequest struct {
 }
 
 type ResourceRecordValue struct {
-	Value string `xml:"Value"`
+	Value        string `xml:"Value,omitempty"`
+	HostedZoneId string `xml:"AliasTarget>HostedZoneId,omitempty"`
+	DNSName      string `xml:"AliasTarget>DNSName,omitempty"`
 }
 
 type Change struct {
