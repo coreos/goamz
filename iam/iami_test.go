@@ -1,9 +1,9 @@
 package iam_test
 
 import (
-	"github.com/crowdmob/goamz/aws"
-	"github.com/crowdmob/goamz/iam"
-	"github.com/crowdmob/goamz/testutil"
+	"github.com/coreos/goamz/aws"
+	"github.com/coreos/goamz/iam"
+	"github.com/coreos/goamz/testutil"
 	"gopkg.in/check.v1"
 	"net/url"
 )

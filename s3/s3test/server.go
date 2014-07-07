@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"fmt"
-	"github.com/crowdmob/goamz/s3"
+	"github.com/coreos/goamz/s3"
 	"io"
 	"io/ioutil"
 	"log"
