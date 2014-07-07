@@ -3,9 +3,9 @@ package ec2_test
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/crowdmob/goamz/aws"
-	"github.com/crowdmob/goamz/ec2"
-	"github.com/crowdmob/goamz/testutil"
+	"github.com/coreos/goamz/aws"
+	"github.com/coreos/goamz/ec2"
+	"github.com/coreos/goamz/testutil"
 	"gopkg.in/check.v1"
 )
 

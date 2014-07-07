@@ -1,8 +1,8 @@
 package ec2_test
 
 import (
-	"github.com/crowdmob/goamz/aws"
-	"github.com/crowdmob/goamz/ec2"
+	"github.com/coreos/goamz/aws"
+	"github.com/coreos/goamz/ec2"
 	"gopkg.in/check.v1"
 )
 
