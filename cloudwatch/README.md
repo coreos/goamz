@@ -1,7 +1,7 @@
 #GoLang AWS Cloudwatch
 
 ## Installation
-Please refer to the project's main page at [https://github.com/crowdmob/goamz](https://github.com/crowdmob/goamz) for instructions about how to install.
+Please refer to the project's main page at [https://github.com/coreos/goamz](https://github.com/coreos/goamz) for instructions about how to install.
 
 ## Available methods
 
@@ -25,13 +25,13 @@ Please refer to the project's main page at [https://github.com/crowdmob/goamz](h
 ##Examples
 ####Get Metric Statistics
 
-```
+```go
 import (
     "fmt"
     "time"
     "os"
-    "github.com/crowdmob/goamz/aws"
-    "github.com/crowdmob/goamz/cloudwatch"
+    "github.com/coreos/goamz/aws"
+    "github.com/coreos/goamz/cloudwatch"
 )
 
 func test_get_metric_statistics() {
@@ -57,9 +57,9 @@ func test_get_metric_statistics() {
                 EndTime: now,
                 StartTime: prev,
                 MetricName: metricName,
-                Unit: "Count", // Not mandatory
+                Unit: cloudwatch.UnitCount, // Not mandatory
                 Period: 60,
-                Statistics: []string{"Sum"},
+                Statistics: []string{cloudwatch.StatisticDatapointSum},
                 Namespace: namespace,
             }
 
@@ -70,17 +70,16 @@ func test_get_metric_statistics() {
         fmt.Printf("Error: %+v\n", err)
     }
 }
-
 ```
 ####List Metrics
 
-```
+```go
 import (
     "fmt"
     "time"
     "os"
-    "github.com/crowdmob/goamz/aws"
-    "github.com/crowdmob/goamz/cloudwatch"
+    "github.com/coreos/goamz/aws"
+    "github.com/coreos/goamz/cloudwatch"
 )
 
 func test_list_metrics() {

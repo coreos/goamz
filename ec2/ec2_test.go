@@ -477,7 +477,7 @@ func (s *S) TestCreateSnapshotExample(c *check.C) {
 func (s *S) TestDeleteSnapshotsExample(c *check.C) {
 	testServer.Response(200, nil, DeleteSnapshotExample)
 
-	resp, err := s.ec2.DeleteSnapshots([]string{"snap-78a54011"})
+	resp, err := s.ec2.DeleteSnapshots("snap-78a54011")
 
 	req := testServer.WaitRequest()
 	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DeleteSnapshot"})
@@ -524,6 +524,47 @@ func (s *S) TestDescribeSnapshotsExample(c *check.C) {
 	c.Assert(s0.Tags, check.HasLen, 1)
 	c.Assert(s0.Tags[0].Key, check.Equals, "Purpose")
 	c.Assert(s0.Tags[0].Value, check.Equals, "demo_db_14_backup")
+}
+
+func (s *S) TestDescribeSubnetsExample(c *check.C) {
+	testServer.Response(200, nil, DescribeSubnetsExample)
+
+	filter := ec2.NewFilter()
+	filter.Add("key1", "value1")
+	filter.Add("key2", "value2", "value3")
+
+	resp, err := s.ec2.Subnets([]string{"subnet-1", "subnet-2"}, filter)
+
+	req := testServer.WaitRequest()
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeSubnets"})
+	c.Assert(req.Form["SubnetId.1"], check.DeepEquals, []string{"subnet-1"})
+	c.Assert(req.Form["SubnetId.2"], check.DeepEquals, []string{"subnet-2"})
+	c.Assert(req.Form["Filter.1.Name"], check.DeepEquals, []string{"key1"})
+	c.Assert(req.Form["Filter.1.Value.1"], check.DeepEquals, []string{"value1"})
+	c.Assert(req.Form["Filter.1.Value.2"], check.IsNil)
+	c.Assert(req.Form["Filter.2.Name"], check.DeepEquals, []string{"key2"})
+	c.Assert(req.Form["Filter.2.Value.1"], check.DeepEquals, []string{"value2"})
+	c.Assert(req.Form["Filter.2.Value.2"], check.DeepEquals, []string{"value3"})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "a5266c3e-2b7a-4434-971e-317b6EXAMPLE")
+	c.Assert(resp.Subnets, check.HasLen, 3)
+
+	s0 := resp.Subnets[0]
+	c.Assert(s0.Id, check.Equals, "subnet-3e993755")
+	c.Assert(s0.State, check.Equals, "available")
+	c.Assert(s0.VpcId, check.Equals, "vpc-f84a9b93")
+	c.Assert(s0.CidrBlock, check.Equals, "10.0.12.0/24")
+	c.Assert(s0.AvailableIpAddressCount, check.Equals, 249)
+	c.Assert(s0.AvailabilityZone, check.Equals, "us-west-2c")
+	c.Assert(s0.DefaultForAz, check.Equals, false)
+	c.Assert(s0.MapPublicIpOnLaunch, check.Equals, false)
+
+	c.Assert(s0.Tags, check.HasLen, 2)
+	c.Assert(s0.Tags[0].Key, check.Equals, "visibility")
+	c.Assert(s0.Tags[0].Value, check.Equals, "private")
+	c.Assert(s0.Tags[1].Key, check.Equals, "Name")
+	c.Assert(s0.Tags[1].Value, check.Equals, "application")
 }
 
 func (s *S) TestCreateSecurityGroupExample(c *check.C) {
@@ -581,6 +622,73 @@ func (s *S) TestDescribeSecurityGroupsExample(c *check.C) {
 	c.Assert(g1ipp.FromPort, check.Equals, 6000)
 	c.Assert(g1ipp.ToPort, check.Equals, 7000)
 	c.Assert(g1ipp.SourceIPs, check.IsNil)
+}
+
+func (s *S) TestDescribeSecurityGroups(c *check.C) {
+	testServer.Response(200, nil, SecurityGroupsVPCExample)
+
+	expected := ec2.SecurityGroupsResp{
+		RequestId: "59dbff89-35bd-4eac-99ed-be587EXAMPLE",
+		Groups: []ec2.SecurityGroupInfo{
+			ec2.SecurityGroupInfo{
+				SecurityGroup: ec2.SecurityGroup{
+					Id:   "sg-67ad940e",
+					Name: "WebServers",
+				},
+				OwnerId:     "999988887777",
+				Description: "Web Servers",
+				IPPerms: []ec2.IPPerm{
+					ec2.IPPerm{
+						Protocol:     "tcp",
+						FromPort:     80,
+						ToPort:       80,
+						SourceIPs:    []string{"0.0.0.0/0"},
+						SourceGroups: nil,
+					},
+				},
+				IPPermsEgress: []ec2.IPPerm{
+					ec2.IPPerm{
+						Protocol:     "tcp",
+						FromPort:     22,
+						ToPort:       22,
+						SourceIPs:    []string{"10.0.0.0/8"},
+						SourceGroups: nil,
+					},
+				},
+			},
+			ec2.SecurityGroupInfo{
+				SecurityGroup: ec2.SecurityGroup{
+					Id:   "sg-76abc467",
+					Name: "RangedPortsBySource",
+				},
+				OwnerId:     "999988887777",
+				Description: "Group A",
+				IPPerms: []ec2.IPPerm{
+					ec2.IPPerm{
+						Protocol: "tcp",
+						FromPort: 6000,
+						ToPort:   7000,
+					},
+				},
+				VpcId: "vpc-12345678",
+				Tags: []ec2.Tag{
+					ec2.Tag{
+						Key:   "key",
+						Value: "value",
+					},
+				},
+			},
+		},
+	}
+
+	resp, err := s.ec2.SecurityGroups([]ec2.SecurityGroup{{Name: "WebServers"}, {Name: "RangedPortsBySource"}}, nil)
+	values := testServer.WaitRequest().URL.Query()
+	c.Assert(values.Get("Action"), check.Equals, "DescribeSecurityGroups")
+	c.Assert(values.Get("GroupName.1"), check.Equals, "WebServers")
+	c.Assert(values.Get("GroupName.2"), check.Equals, "RangedPortsBySource")
+
+	c.Assert(err, check.IsNil)
+	c.Assert(*resp, check.DeepEquals, expected)
 }
 
 func (s *S) TestDescribeSecurityGroupsExampleWithFilter(c *check.C) {
@@ -767,6 +875,36 @@ func (s *S) TestCreateTags(c *check.C) {
 	c.Assert(resp.RequestId, check.Equals, "59dbff89-35bd-4eac-99ed-be587EXAMPLE")
 }
 
+func (s *S) TestDescribeTags(c *check.C) {
+	testServer.Response(200, nil, DescribeTagsExample)
+
+	filter := ec2.NewFilter()
+	filter.Add("key1", "value1")
+
+	resp, err := s.ec2.DescribeTags(filter)
+
+	req := testServer.WaitRequest()
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeTags"})
+	c.Assert(req.Form["Filter.1.Name"], check.DeepEquals, []string{"key1"})
+	c.Assert(req.Form["Filter.1.Value.1"], check.DeepEquals, []string{"value1"})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "7a62c49f-347e-4fc4-9331-6e8eEXAMPLE")
+	c.Assert(resp.Tags, check.HasLen, 6)
+
+	r0 := resp.Tags[0]
+	c.Assert(r0.Key, check.Equals, "webserver")
+	c.Assert(r0.Value, check.Equals, "")
+	c.Assert(r0.ResourceId, check.Equals, "ami-1a2b3c4d")
+	c.Assert(r0.ResourceType, check.Equals, "image")
+
+	r1 := resp.Tags[1]
+	c.Assert(r1.Key, check.Equals, "stack")
+	c.Assert(r1.Value, check.Equals, "Production")
+	c.Assert(r1.ResourceId, check.Equals, "ami-1a2b3c4d")
+	c.Assert(r1.ResourceType, check.Equals, "image")
+}
+
 func (s *S) TestStartInstances(c *check.C) {
 	testServer.Response(200, nil, StartInstancesExample)
 
@@ -853,4 +991,168 @@ func (s *S) TestDescribeReservedInstancesiExample(c *check.C) {
 
 }
 
+func (s *S) TestDeregisterImage(c *check.C) {
+	testServer.Response(200, nil, DeregisterImageExample)
 
+	resp, err := s.ec2.DeregisterImage("i-1")
+
+	req := testServer.WaitRequest()
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DeregisterImage"})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "59dbff89-35bd-4eac-99ed-be587EXAMPLE")
+	c.Assert(resp.Response, check.Equals, true)
+
+}
+
+func (s *S) TestDescribeInstanceStatus(c *check.C) {
+	testServer.Response(200, nil, DescribeInstanceStatusExample)
+
+	resp, err := s.ec2.DescribeInstanceStatus([]string{"i-1a2b3c4d", "i-2a2b3c4d"}, nil)
+
+	req := testServer.WaitRequest()
+
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeInstanceStatus"})
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "3be1508e-c444-4fef-89cc-0b1223c4f02fEXAMPLE")
+	c.Assert(resp.InstanceStatuses, check.HasLen, 4)
+	r0 := resp.InstanceStatuses[0]
+	c.Assert(r0.InstanceId, check.Equals, "i-1a2b3c4d")
+	c.Assert(r0.InstanceState, check.Equals, "running")
+	c.Assert(r0.SystemStatus.StatusName, check.Equals, "impaired")
+	c.Assert(r0.SystemStatus.Status, check.Equals, "failed")
+	c.Assert(r0.InstanceStatus.StatusName, check.Equals, "impaired")
+}
+
+func (s *S) TestDescribeVolumes(c *check.C) {
+	testServer.Response(200, nil, DescribeVolumesExample)
+
+	resp, err := s.ec2.DescribeVolumes([]string{"vol-1a2b3c4d"}, nil)
+
+	req := testServer.WaitRequest()
+
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeVolumes"})
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "59dbff89-35bd-4eac-99ed-be587EXAMPLE")
+	c.Assert(resp.Volumes, check.HasLen, 1)
+	v0 := resp.Volumes[0]
+	c.Assert(v0.AvailabilityZone, check.Equals, "us-east-1a")
+	c.Assert(v0.Size, check.Equals, 80)
+	c.Assert(v0.Status, check.Equals, "in-use")
+	c.Assert(v0.AttachmentSet.VolumeId, check.Equals, "vol-1a2b3c4d")
+	c.Assert(v0.AttachmentSet.InstanceId, check.Equals, "i-1a2b3c4d")
+	c.Assert(v0.AttachmentSet.Device, check.Equals, "/dev/sdh")
+	c.Assert(v0.AttachmentSet.Status, check.Equals, "attached")
+}
+
+func (s *S) TestAttachVolume(c *check.C) {
+	testServer.Response(200, nil, AttachVolumeExample)
+
+	resp, err := s.ec2.AttachVolume("v-1", "i-1", "/dev/sdz")
+
+	req := testServer.WaitRequest()
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"AttachVolume"})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "59dbff89-35bd-4eac-99ed-be587EXAMPLE")
+}
+
+func (s *S) TestCreateVolume(c *check.C) {
+	testServer.Response(200, nil, CreateVolumeExample)
+
+	resp, err := s.ec2.CreateVolume(ec2.CreateVolumeOptions{
+		Size:             "1",
+		AvailabilityZone: "us-east-1a",
+	})
+
+	req := testServer.WaitRequest()
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"CreateVolume"})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "0c67a4c9-d7ec-45ef-8016-bf666EXAMPLE")
+	c.Assert(resp.Size, check.Equals, "1")
+	c.Assert(resp.VolumeId, check.Equals, "vol-2a21e543")
+	c.Assert(resp.AvailabilityZone, check.Equals, "us-east-1a")
+	c.Assert(resp.SnapshotId, check.Equals, "")
+	c.Assert(resp.Status, check.Equals, "creating")
+	c.Assert(resp.CreateTime, check.Equals, "2009-12-28T05:42:53.000Z")
+	c.Assert(resp.VolumeType, check.Equals, "standard")
+	c.Assert(resp.IOPS, check.Equals, 0)
+	c.Assert(resp.Encrypted, check.Equals, false)
+}
+
+func (s *S) TestDescribeVpcs(c *check.C) {
+	testServer.Response(200, nil, DescribeVpcsExample)
+
+	resp, err := s.ec2.DescribeVpcs([]string{"vpc-1a2b3c4d"}, nil)
+
+	req := testServer.WaitRequest()
+
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeVpcs"})
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "7a62c49f-347e-4fc4-9331-6e8eEXAMPLE")
+	c.Assert(resp.Vpcs, check.HasLen, 1)
+	v0 := resp.Vpcs[0]
+	c.Assert(v0.VpcId, check.Equals, "vpc-1a2b3c4d")
+	c.Assert(v0.State, check.Equals, "available")
+	c.Assert(v0.CidrBlock, check.Equals, "10.0.0.0/23")
+	c.Assert(v0.DhcpOptionsId, check.Equals, "dopt-7a8b9c2d")
+	c.Assert(v0.InstanceTenancy, check.Equals, "default")
+	c.Assert(v0.IsDefault, check.Equals, false)
+}
+
+func (s *S) TestDescribeVpnConnections(c *check.C) {
+	testServer.Response(200, nil, DescribeVpnConnectionsExample)
+
+	resp, err := s.ec2.DescribeVpnConnections([]string{"vpn-44a8938f"}, nil)
+
+	req := testServer.WaitRequest()
+
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeVpnConnections"})
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "7a62c49f-347e-4fc4-9331-6e8eEXAMPLE")
+	c.Assert(resp.VpnConnections, check.HasLen, 1)
+	v0 := resp.VpnConnections[0]
+	c.Assert(v0.VpnConnectionId, check.Equals, "vpn-44a8938f")
+	c.Assert(v0.State, check.Equals, "available")
+	c.Assert(v0.Type, check.Equals, "ipsec.1")
+	c.Assert(v0.CustomerGatewayId, check.Equals, "cgw-b4dc3961")
+	c.Assert(v0.VpnGatewayId, check.Equals, "vgw-8db04f81")
+}
+
+func (s *S) TestDescribeVpnGateways(c *check.C) {
+	testServer.Response(200, nil, DescribeVpnGatewaysExample)
+
+	resp, err := s.ec2.DescribeVpnGateways([]string{"vgw-8db04f81"}, nil)
+
+	req := testServer.WaitRequest()
+
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeVpnGateways"})
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "7a62c49f-347e-4fc4-9331-6e8eEXAMPLE")
+	c.Assert(resp.VpnGateway, check.HasLen, 1)
+	g0 := resp.VpnGateway[0]
+	c.Assert(g0.VpnGatewayId, check.Equals, "vgw-8db04f81")
+	c.Assert(g0.State, check.Equals, "available")
+	c.Assert(g0.Type, check.Equals, "ipsec.1")
+	c.Assert(g0.AvailabilityZone, check.Equals, "us-east-1a")
+	c.Assert(g0.AttachedVpcId, check.Equals, "vpc-1a2b3c4d")
+	c.Assert(g0.AttachState, check.Equals, "attached")
+}
+
+func (s *S) TestDescribeInternetGateways(c *check.C) {
+	testServer.Response(200, nil, DescribeInternetGatewaysExample)
+
+	resp, err := s.ec2.DescribeInternetGateways([]string{"igw-eaad4883EXAMPLE"}, nil)
+
+	req := testServer.WaitRequest()
+
+	c.Assert(req.Form["Action"], check.DeepEquals, []string{"DescribeInternetGateways"})
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.RequestId, check.Equals, "59dbff89-35bd-4eac-99ed-be587EXAMPLE")
+	c.Assert(resp.InternetGateway, check.HasLen, 1)
+	g0 := resp.InternetGateway[0]
+	c.Assert(g0.InternetGatewayId, check.Equals, "igw-eaad4883EXAMPLE")
+	c.Assert(g0.AttachedVpcId, check.Equals, "vpc-11ad4878")
+	c.Assert(g0.AttachState, check.Equals, "available")
+}

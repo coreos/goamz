@@ -891,6 +891,50 @@ func (ec2 *EC2) Images(ids []string, filter *Filter) (resp *ImagesResp, err erro
 	return
 }
 
+type CreateImageResp struct {
+	RequestId string `xml:"requestId"`
+	ImageId   string `xml:"imageId"`
+}
+
+// CreateImage creates an Amazon EBS-backed AMI from an Amazon EBS-backed instance that
+// is either running or stopped.
+//
+// see http://goo.gl/MnMunA for more details.
+func (ec2 *EC2) CreateImage(instanceId, name, description string, noReboot bool) (resp *CreateImageResp, err error) {
+	params := makeParams("CreateImage")
+	params["InstanceId"] = instanceId
+	params["Name"] = name
+	params["Description"] = description
+	if noReboot {
+		params["NoReboot"] = "true"
+	}
+
+	resp = &CreateImageResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+// CopyImage initiates the copy of an AMI from the specified source region to the current region.
+//
+// see http://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-CopyImage.html for more details.
+func (ec2 *EC2) CopyImage(sourceRegion aws.Region, imageId, name, description string) (resp *CreateImageResp, err error) {
+	params := makeParams("CopyImage")
+	params["SourceRegion"] = sourceRegion.Name
+	params["SourceImageId"] = imageId
+	params["Name"] = name
+	params["Description"] = description
+
+	resp = &CreateImageResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
 // Response to a CreateSnapshot request.
 //
 // See http://goo.gl/ttcda for more details.
@@ -925,11 +969,9 @@ func (ec2 *EC2) CreateSnapshot(volumeId, description string) (resp *CreateSnapsh
 // snapshot in order to restore the volume.
 //
 // See http://goo.gl/vwU1y for more details.
-func (ec2 *EC2) DeleteSnapshots(ids []string) (resp *SimpleResp, err error) {
+func (ec2 *EC2) DeleteSnapshots(ssid string) (resp *SimpleResp, err error) {
 	params := makeParams("DeleteSnapshot")
-	for i, id := range ids {
-		params["SnapshotId."+strconv.Itoa(i+1)] = id
-	}
+	params["SnapshotId.1"] = ssid
 
 	resp = &SimpleResp{}
 	err = ec2.query(params, resp)
@@ -976,6 +1018,65 @@ func (ec2 *EC2) Snapshots(ids []string, filter *Filter) (resp *SnapshotsResp, er
 	filter.addParams(params)
 
 	resp = &SnapshotsResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+// DeregisterImage
+//
+type DeregisterImageResponse struct {
+	RequestId string `xml:"requestId"`
+	Response  bool   `xml:"return"`
+}
+
+// See
+//
+func (ec2 *EC2) DeregisterImage(imageId string) (resp *DeregisterImageResponse, err error) {
+	params := makeParams("DeregisterImage")
+	params["ImageId"] = imageId
+
+	resp = &DeregisterImageResponse{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+// ---------------------------------------------------------------------------
+// Subnets
+
+type SubnetsResp struct {
+	RequestId string   `xml:"requestId"`
+	Subnets   []Subnet `xml:"subnetSet>item"`
+}
+
+// Subnet represents details about a given VPC subnet
+type Subnet struct {
+	Id                      string `xml:"subnetId"`
+	State                   string `xml:"state"`
+	VpcId                   string `xml:"vpcId"`
+	CidrBlock               string `xml:"cidrBlock"`
+	AvailableIpAddressCount int    `xml:"availableIpAddressCount"`
+	AvailabilityZone        string `xml:"availabilityZone"`
+	DefaultForAz            bool   `xml:"defaultForAz"`
+	MapPublicIpOnLaunch     bool   `xml:"mapPublicIpOnLaunch"`
+	Tags                    []Tag  `xml:"tagSet>item"`
+}
+
+// Subnets returns details about VPC subnets.
+// The ids are filter parameters, if provided, limit the subnets returned.
+func (ec2 *EC2) Subnets(ids []string, filter *Filter) (resp *SubnetsResp, err error) {
+	params := makeParams("DescribeSubnets")
+	for i, id := range ids {
+		params["SubnetId."+strconv.Itoa(i+1)] = id
+	}
+	filter.addParams(params)
+
+	resp = &SubnetsResp{}
 	err = ec2.query(params, resp)
 	if err != nil {
 		return nil, err
@@ -1031,9 +1132,12 @@ type SecurityGroupsResp struct {
 // See http://goo.gl/CIdyP for more details.
 type SecurityGroupInfo struct {
 	SecurityGroup
-	OwnerId     string   `xml:"ownerId"`
-	Description string   `xml:"groupDescription"`
-	IPPerms     []IPPerm `xml:"ipPermissions>item"`
+	OwnerId       string   `xml:"ownerId"`
+	Description   string   `xml:"groupDescription"`
+	IPPerms       []IPPerm `xml:"ipPermissions>item"`
+	IPPermsEgress []IPPerm `xml:"ipPermissionsEgress>item"`
+	VpcId         string   `xml:"vpcId"`
+	Tags          []Tag    `xml:"tagSet>item"`
 }
 
 // IPPerm represents an allowance within an EC2 security group.
@@ -1210,6 +1314,40 @@ func (ec2 *EC2) CreateTags(instIds []string, tags []Tag) (resp *SimpleResp, err 
 	return resp, nil
 }
 
+// DescribedTag represents key-value metadata used to classify and organize EC2
+// instances. Also includes the Resource ID and type the tag is attached to
+//
+// See http://goo.gl/hgJjO7 for more details.
+type DescribedTag struct {
+	ResourceId   string `xml:"resourceId"`
+	ResourceType string `xml:"resourceType"`
+	Key          string `xml:"key"`
+	Value        string `xml:"value"`
+}
+
+// Response to a DescribeTags request.
+//
+// See http://goo.gl/hgJjO7 for more details.
+type DescribeTagsResp struct {
+	RequestId string         `xml:"requestId"`
+	Tags      []DescribedTag `xml:"tagSet>item"`
+}
+
+// DescribeTags returns tags about one or more EC2 Resources. Returned tags can
+// be filtered.
+//
+// See http://goo.gl/hgJjO7 for more details.
+func (ec2 *EC2) DescribeTags(filter *Filter) (resp *DescribeTagsResp, err error) {
+	params := makeParams("DescribeTags")
+	filter.addParams(params)
+	resp = &DescribeTagsResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
 // Response to a StartInstances request.
 //
 // See http://goo.gl/awKeF for more details.
@@ -1290,20 +1428,20 @@ type DescribeReservedInstancesResponse struct {
 type ReservedInstancesResponseItem struct {
 	ReservedInstanceId string            `xml:"reservedInstancesId"`
 	InstanceType       string            `xml:"instanceType"`
-	AvailabilityZone    string            `xml:"availabilityZone"`
-	Start               string            `xml:"start"`
-	Duration            uint64            `xml:"duration"`
-	End                 string            `xml:"end"`
-	FixedPrice          float32           `xml:"fixedPrice"`
-	UsagePrice          float32           `xml:"usagePrice"`
-	InstanceCount       int               `xml:"instanceCount"`
-	ProductDescription  string            `xml:"productDescription"`
-	State               string            `xml:"state"`
-	Tags                []Tag             `xml:"tagSet->item"`
-	InstanceTenancy     string            `xml:"instanceTenancy"`
-	CurrencyCode        string            `xml:"currencyCode"`
-	OfferingType        string            `xml:"offeringType"`
-	RecurringCharges    []RecurringCharge `xml:"recurringCharges>item"`
+	AvailabilityZone   string            `xml:"availabilityZone"`
+	Start              string            `xml:"start"`
+	Duration           uint64            `xml:"duration"`
+	End                string            `xml:"end"`
+	FixedPrice         float32           `xml:"fixedPrice"`
+	UsagePrice         float32           `xml:"usagePrice"`
+	InstanceCount      int               `xml:"instanceCount"`
+	ProductDescription string            `xml:"productDescription"`
+	State              string            `xml:"state"`
+	Tags               []Tag             `xml:"tagSet->item"`
+	InstanceTenancy    string            `xml:"instanceTenancy"`
+	CurrencyCode       string            `xml:"currencyCode"`
+	OfferingType       string            `xml:"offeringType"`
+	RecurringCharges   []RecurringCharge `xml:"recurringCharges>item"`
 }
 
 //
@@ -1317,14 +1455,14 @@ type RecurringCharge struct {
 // functions
 // DescribeReservedInstances
 //
-// See 
+// See
 func (ec2 *EC2) DescribeReservedInstances(instIds []string, filter *Filter) (resp *DescribeReservedInstancesResponse, err error) {
 	params := makeParams("DescribeReservedInstances")
 
-        for i, id := range instIds {
-                params["ReservedInstancesId."+strconv.Itoa(i+1)] = id
-        }
-        filter.addParams(params)
+	for i, id := range instIds {
+		params["ReservedInstancesId."+strconv.Itoa(i+1)] = id
+	}
+	filter.addParams(params)
 
 	resp = &DescribeReservedInstancesResponse{}
 	err = ec2.query(params, resp)
@@ -1334,3 +1472,256 @@ func (ec2 *EC2) DescribeReservedInstances(instIds []string, filter *Filter) (res
 	return resp, nil
 }
 
+type SystemStateStruct struct {
+	StatusName string `xml:"status"`
+	Name       string `xml:"details>item>name"`
+	Status     string `xml:"details>item>status"`
+	Since      string `xml:"details>item>impairedSince"`
+}
+type EventSetStruct struct {
+	EventCode   string `xml:"item>code"`
+	Description string `xml:"item>description"`
+	NotBefore   string `xml:"item>notBefore"`
+	NotAfter    string `xml:"item>notAfter"`
+}
+type InstanceStatus struct {
+	InstanceId       string            `xml:"instanceId"`
+	AvailabilityZone string            `xml:"availabilityZone"`
+	InstanceState    string            `xml:"instanceState>name"`
+	InstanceStatus   SystemStateStruct `xml:"instanceStatus"`
+	SystemStatus     SystemStateStruct `xml:"systemStatus"`
+	EventDetails     EventSetStruct    `xml:"eventsSet"`
+}
+type DescribeInstanceStatusResponse struct {
+	RequestId        string           `xml:"requestId"`
+	InstanceStatuses []InstanceStatus `xml:"instanceStatusSet>item"`
+}
+
+func (ec2 *EC2) DescribeInstanceStatus(instIds []string, filter *Filter) (resp *DescribeInstanceStatusResponse, err error) {
+	params := makeParams("DescribeInstanceStatus")
+	addParamsList(params, "InstanceId", instIds)
+	filter.addParams(params)
+	resp = &DescribeInstanceStatusResponse{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type AttachmentSetStruct struct {
+	VolumeId            string `xml:"volumeId"`
+	InstanceId          string `xml:"instanceId"`
+	Device              string `xml:"device"`
+	Status              string `xml:"status"`
+	AttachTime          string `xml:"attachTime"`
+	DeleteOnTermination bool   `xml:"deleteOnTermination"`
+}
+
+type VolumeStruct struct {
+	VolumeId         string              `xml:"volumeId"`
+	Size             int                 `xml:"size"`
+	SnapShotId       string              `xml:"snapshotId"`
+	AvailabilityZone string              `xml:"availabilityZone"`
+	Status           string              `xml:"status"`
+	CreateTime       string              `xml:"createTime"`
+	AttachmentSet    AttachmentSetStruct `xml:"attachmentSet>item"`
+	VolumeType       string              `xml:"volumeType"`
+	Encrypted        string              `xml:"encrypted"`
+}
+
+type DescribeVolumesResp struct {
+	RequestId string         `xml:"requestId"`
+	Volumes   []VolumeStruct `xml:"volumeSet>item"`
+}
+
+func (ec2 *EC2) DescribeVolumes(volIds []string, filter *Filter) (resp *DescribeVolumesResp, err error) {
+	params := makeParams("DescribeVolumes")
+	addParamsList(params, "VolumeId", volIds)
+	filter.addParams(params)
+	resp = &DescribeVolumesResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type AttachVolumeResp struct {
+	RequestId  string `xml:"requestId"`
+	VolumeId   string `xml:"volumeId"`
+	InstanceId string `xml:"instanceId"`
+	Device     string `xml:"device"`
+	Status     string `xml:"status"`
+	AttachTime string `xml:"attachTime"`
+}
+
+func (ec2 *EC2) AttachVolume(volId string, InstId string, devName string) (resp *AttachVolumeResp, err error) {
+	params := makeParams("AttachVolume")
+	params["VolumeId"] = volId
+	params["InstanceId"] = InstId
+	params["Device"] = devName
+
+	resp = &AttachVolumeResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type CreateVolumeOptions struct {
+	Size             string
+	SnapshotId       string
+	AvailabilityZone string
+	VolumeType       string
+	IOPS             int
+	Encrypted        bool
+	KmsKeyId         string
+}
+
+type CreateVolumeResp struct {
+	RequestId        string `xml:"requestId"`
+	VolumeId         string `xml:"volumeId"`
+	Size             string `xml:"size"`
+	SnapshotId       string `xml:"snapshotId"`
+	AvailabilityZone string `xml:"availabilityZone"`
+	Status           string `xml:"status"`
+	CreateTime       string `xml:"createTime"`
+	VolumeType       string `xml:"volumeType"`
+	IOPS             int    `xml:"iops"`
+	Encrypted        bool   `xml:"encrypted"`
+	KmsKeyId         string `xml:"kmsKeyId"`
+}
+
+// CreateVolume creates an Amazon EBS volume that can be attached to an instance in the same Availability Zone.
+//
+// See http://goo.gl/DERo1w for more details.
+func (ec2 *EC2) CreateVolume(options CreateVolumeOptions) (resp *CreateVolumeResp, err error) {
+	params := makeParams("CreateVolume")
+	params["AvailabilityZone"] = options.AvailabilityZone
+
+	if options.Size != "" {
+		params["Size"] = options.Size
+	}
+	if options.SnapshotId != "" {
+		params["SnapshotId"] = options.SnapshotId
+	}
+	if options.VolumeType != "" {
+		params["VolumeType"] = options.VolumeType
+	}
+	if options.IOPS > 0 {
+		params["Iops"] = strconv.Itoa(options.IOPS)
+	}
+	if options.Encrypted {
+		params["Encrypted"] = "true"
+	}
+	if options.KmsKeyId != "" {
+		params["KmsKeyId"] = options.KmsKeyId
+	}
+
+	resp = &CreateVolumeResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type VpcStruct struct {
+	VpcId           string `xml:"vpcId"`
+	State           string `xml:"state"`
+	CidrBlock       string `xml:"cidrBlock"`
+	DhcpOptionsId   string `xml:"dhcpOptionsId"`
+	InstanceTenancy string `xml:"instanceTenancy"`
+	IsDefault       bool   `xml:"isDefault"`
+}
+
+type DescribeVpcsResp struct {
+	RequestId string      `xml:"requestId"`
+	Vpcs      []VpcStruct `xml:"vpcSet>item"`
+}
+
+func (ec2 *EC2) DescribeVpcs(vpcIds []string, filter *Filter) (resp *DescribeVpcsResp, err error) {
+	params := makeParams("DescribeVpcs")
+	addParamsList(params, "vpcId", vpcIds)
+	filter.addParams(params)
+	resp = &DescribeVpcsResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type VpnConnectionStruct struct {
+	VpnConnectionId   string `xml:"vpnConnectionId"`
+	State             string `xml:"state"`
+	Type              string `xml:"type"`
+	CustomerGatewayId string `xml:"customerGatewayId"`
+	VpnGatewayId      string `xml:"vpnGatewayId"`
+}
+
+type DescribeVpnConnectionsResp struct {
+	RequestId      string                `xml:"requestId"`
+	VpnConnections []VpnConnectionStruct `xml:"vpnConnectionSet>item"`
+}
+
+func (ec2 *EC2) DescribeVpnConnections(VpnConnectionIds []string, filter *Filter) (resp *DescribeVpnConnectionsResp, err error) {
+	params := makeParams("DescribeVpnConnections")
+	addParamsList(params, "VpnConnectionId", VpnConnectionIds)
+	filter.addParams(params)
+	resp = &DescribeVpnConnectionsResp{}
+	err = ec2.query(params, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type VpnGatewayStruct struct {
+	VpnGatewayId     string `xml:"vpnGatewayId"`
+	State            string `xml:"state"`
+	Type             string `xml:"type"`
+	AvailabilityZone string `xml:"availabilityZone"`
+	AttachedVpcId    string `xml:"attachments>item>vpcId"`
+	AttachState      string `xml:"attachments>item>state"`
+}
+
+type DescribeVpnGatewaysResp struct {
+	RequestId  string             `xml:"requestId"`
+	VpnGateway []VpnGatewayStruct `xml:"vpnGatewaySet>item"`
+}
+
+func (ec2 *EC2) DescribeVpnGateways(VpnGatewayIds []string, filter *Filter) (resp *DescribeVpnGatewaysResp, err error) {
+	params := makeParams("DescribeVpnGateways")
+	addParamsList(params, "VpnGatewayIds", VpnGatewayIds)
+	filter.addParams(params)
+	resp = &DescribeVpnGatewaysResp{}
+	if err = ec2.query(params, resp); err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+type InternetGatewayStruct struct {
+	InternetGatewayId string `xml:"internetGatewayId"`
+	AttachedVpcId     string `xml:"attachmentSet>item>vpcId"`
+	AttachState       string `xml:"attachmentSet>item>state"`
+}
+
+type DescribeInternetGatewaysResp struct {
+	RequestId       string                  `xml:"requestId"`
+	InternetGateway []InternetGatewayStruct `xml:"internetGatewaySet>item"`
+}
+
+func (ec2 *EC2) DescribeInternetGateways(InternetGatewayIds []string, filter *Filter) (resp *DescribeInternetGatewaysResp, err error) {
+	params := makeParams("DescribeInternetGateways")
+	addParamsList(params, "InternetGatewayId", InternetGatewayIds)
+	filter.addParams(params)
+	resp = &DescribeInternetGatewaysResp{}
+	if err = ec2.query(params, resp); err != nil {
+		return nil, err
+	}
+	return resp, err
+}

@@ -21,6 +21,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,20 +35,12 @@ type SQS struct {
 }
 
 // NewFrom Create A new SQS Client given an access and secret Key
-// region must be one of "us.east, us.west, eu.west"
 func NewFrom(accessKey, secretKey, region string) (*SQS, error) {
 
 	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
-	aws_region := aws.USEast
 
-	switch region {
-	case "us.east":
-		aws_region = aws.USEast
-	case "us.west":
-		aws_region = aws.USWest
-	case "eu.west":
-		aws_region = aws.EUWest
-	default:
+	aws_region, ok := aws.Regions[region]
+	if ok != true {
 		return nil, errors.New(fmt.Sprintf("Unknow/Unsupported region %s", region))
 	}
 
@@ -86,6 +79,10 @@ type DeleteMessageResponse struct {
 }
 
 type DeleteQueueResponse struct {
+	ResponseMetadata ResponseMetadata
+}
+
+type PurgeQueueResponse struct {
 	ResponseMetadata ResponseMetadata
 }
 
@@ -132,6 +129,10 @@ type ChangeMessageVisibilityResponse struct {
 
 type GetQueueAttributesResponse struct {
 	Attributes       []Attribute `xml:"GetQueueAttributesResult>Attribute"`
+	ResponseMetadata ResponseMetadata
+}
+
+type SetQueueAttributesResponse struct {
 	ResponseMetadata ResponseMetadata
 }
 
@@ -218,7 +219,7 @@ func (s *SQS) newQueue(queueName string, attrs map[string]string) (resp *CreateQ
 	i := 1
 	for k, v := range attrs {
 		nameParam := fmt.Sprintf("Attribute.%d.Name", i)
-		valParam := fmt.Sprintf("Attribute.%d.Value", 1)
+		valParam := fmt.Sprintf("Attribute.%d.Value", i)
 		params[nameParam] = k
 		params[valParam] = v
 		i++
@@ -274,7 +275,9 @@ func (q *Queue) SendMessageWithAttributes(MessageBody string, MessageAttributes 
 		i++
 	}
 
-	err = q.SQS.query(q.Url, params, resp)
+	if err = q.SQS.query(q.Url, params, resp); err != nil {
+		return resp, err
+	}
 
 	// Assert we have expected Attribute MD5 if we've passed any Message Attributes
 	if len(MessageAttributes) > 0 {
@@ -313,6 +316,7 @@ func (q *Queue) ReceiveMessageWithParameters(p map[string]string) (resp *Receive
 	resp = &ReceiveMessageResponse{}
 	params := makeParams("ReceiveMessage")
 	params["AttributeName"] = "All"
+	params["MessageAttributeName"] = "All"
 
 	for k, v := range p {
 		params[k] = v
@@ -336,6 +340,23 @@ func (q *Queue) GetQueueAttributes(A string) (resp *GetQueueAttributesResponse, 
 	resp = &GetQueueAttributesResponse{}
 	params := makeParams("GetQueueAttributes")
 	params["AttributeName"] = A
+
+	err = q.SQS.query(q.Url, params, resp)
+	return
+}
+
+func (q *Queue) SetQueueAttributes(attrs map[string]string) (resp *SetQueueAttributesResponse, err error) {
+	resp = &SetQueueAttributesResponse{}
+	params := makeParams("SetQueueAttributes")
+
+	i := 1
+	for k, v := range attrs {
+		nameParam := fmt.Sprintf("Attribute.%d.Name", i)
+		valParam := fmt.Sprintf("Attribute.%d.Value", i)
+		params[nameParam] = k
+		params[valParam] = v
+		i++
+	}
 
 	err = q.SQS.query(q.Url, params, resp)
 	return
@@ -441,40 +462,46 @@ func (q *Queue) DeleteMessageBatch(msgList []Message) (resp *DeleteMessageBatchR
 	return
 }
 
+func (q *Queue) PurgeQueue() (resp *PurgeQueueResponse, err error) {
+	resp = &PurgeQueueResponse{}
+	params := makeParams("PurgeQueue")
+
+	err = q.SQS.query(q.Url, params, resp)
+
+	return
+}
+
 func (s *SQS) query(queueUrl string, params map[string]string, resp interface{}) (err error) {
-	params["Version"] = "2011-10-01"
-	params["Timestamp"] = time.Now().In(time.UTC).Format(time.RFC3339)
 	var url_ *url.URL
 
-	var path string
 	if queueUrl != "" && len(queueUrl) > len(s.Region.SQSEndpoint) {
 		url_, err = url.Parse(queueUrl)
-		path = queueUrl[len(s.Region.SQSEndpoint):]
 	} else {
 		url_, err = url.Parse(s.Region.SQSEndpoint)
-		path = "/"
 	}
+
 	if err != nil {
 		return err
 	}
 
-	//url_, err := url.Parse(s.Region.SQSEndpoint)
-	//if err != nil {
-	//	return err
-	//}
+	params["Version"] = "2012-11-05"
+	hreq, err := http.NewRequest("POST", url_.String(), strings.NewReader(multimap(params).Encode()))
+	if err != nil {
+		return err
+	}
+
+	hreq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	hreq.Header.Set("X-Amz-Date", time.Now().UTC().Format(aws.ISO8601BasicFormat))
 
 	if s.Auth.Token() != "" {
-		params["SecurityToken"] = s.Auth.Token()
-	}
-	sign(s.Auth, "GET", path, params, url_.Host)
-
-	url_.RawQuery = multimap(params).Encode()
-
-	if debug {
-		log.Printf("GET ", url_.String())
+		hreq.Header.Set("X-Amz-Security-Token", s.Auth.Token())
 	}
 
-	r, err := http.Get(url_.String())
+	signer := aws.NewV4Signer(s.Auth, "sqs", s.Region)
+	signer.Sign(hreq)
+
+	r, err := http.DefaultClient.Do(hreq)
+
 	if err != nil {
 		return err
 	}

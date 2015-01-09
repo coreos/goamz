@@ -364,10 +364,34 @@ func makeCreateParams(createLB *CreateLoadBalancer) map[string]string {
 		params[fmt.Sprintf(key, index, "InstanceProtocol")] = l.InstanceProtocol
 		params[fmt.Sprintf(key, index, "Protocol")] = l.Protocol
 		params[fmt.Sprintf(key, index, "LoadBalancerPort")] = strconv.Itoa(l.LoadBalancerPort)
+		params[fmt.Sprintf(key, index, "SSLCertificateId")] = l.SSLCertificateId
 	}
 	for i, az := range createLB.AvailabilityZones {
 		key := fmt.Sprintf("AvailabilityZones.member.%d", i+1)
 		params[key] = az
 	}
 	return params
+}
+
+type DescribeLoadBalancerAttributesResp struct {
+	AccessLogEnabled          bool   `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>AccessLog>Enabled"`
+	AccessLogS3Bucket         string `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>AccessLog>S3BucketName"`
+	AccessLogS3Prefix         string `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>AccessLog>S3BucketPrefix"`
+	AccessLogEmitInterval     int    `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>AccessLog>EmitInterval"`
+	IdleTimeout               int    `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>ConnectionSettings>IdleTimeout"`
+	CrossZoneLoadbalancing    bool   `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>CrossZoneLoadBalancing>Enabled"`
+	ConnectionDrainingTimeout int    `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>ConnectionDraining>Timeout"`
+	ConnectionDrainingEnabled bool   `xml:"DescribeLoadBalancerAttributesResult>LoadBalancerAttributes>ConnectionDraining>Enabled"`
+}
+
+func (elb *ELB) DescribeLoadBalancerAttributes(lbName string) (*DescribeLoadBalancerAttributesResp, error) {
+	params := map[string]string{
+		"Action":           "DescribeLoadBalancerAttributes",
+		"LoadBalancerName": lbName,
+	}
+	resp := new(DescribeLoadBalancerAttributesResp)
+	if err := elb.query(params, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

@@ -1,9 +1,8 @@
-package dynamodb_test
+package dynamodb
 
 import (
 	"flag"
 	"github.com/coreos/goamz/aws"
-	"github.com/coreos/goamz/dynamodb"
 	"gopkg.in/check.v1"
 	"testing"
 	"time"
@@ -18,10 +17,10 @@ var dynamodb_region aws.Region
 var dynamodb_auth aws.Auth
 
 type DynamoDBTest struct {
-	server            *dynamodb.Server
+	server            *Server
 	aws.Region        // Exports Region
-	TableDescriptionT dynamodb.TableDescriptionT
-	table             *dynamodb.Table
+	TableDescriptionT TableDescriptionT
+	table             *Table
 }
 
 // Delete all items in the table
@@ -36,7 +35,7 @@ func (s *DynamoDBTest) TearDownTest(c *check.C) {
 		c.Fatal(err)
 	}
 	for _, a := range attrs {
-		key := &dynamodb.Key{
+		key := &Key{
 			HashKey: a[pk.KeyAttribute.Name].Value,
 		}
 		if pk.HasRange() {
@@ -139,7 +138,7 @@ func setUpAuth(c *check.C) {
 		dynamodb_auth = aws.Auth{AccessKey: "DUMMY_KEY", SecretKey: "DUMMY_SECRET"}
 	} else {
 		c.Log("Using REAL AMAZON SERVER")
-		dynamodb_region = aws.USEast
+		dynamodb_region = aws.USWest2
 		auth, err := aws.EnvAuth()
 		if err != nil {
 			c.Fatal(err)
