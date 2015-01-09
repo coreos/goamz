@@ -7,6 +7,7 @@ import (
 	"github.com/coreos/goamz/aws"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type Route53 struct {
@@ -34,14 +35,16 @@ type HostedZone struct {
 	XMLName                xml.Name `xml:"HostedZone"`
 	Id                     string
 	Name                   string
+	VPC                    HostedZoneVPC `xml:"VPC,omitempty"` // used on CreateHostedZone
 	CallerReference        string
 	Config                 Config
 	ResourceRecordSetCount int
 }
 
 type Config struct {
-	XMLName xml.Name `xml:"Config"`
-	Comment string
+	XMLName     xml.Name `xml:"Config"`
+	Comment     string
+	PrivateZone bool
 }
 
 // Structs for getting the existing Hosted Zones
@@ -60,21 +63,21 @@ type CreateHostedZoneRequest struct {
 	Xmlns            string   `xml:"xmlns,attr"`
 	Name             string
 	CallerReference  string
+	VPC              HostedZoneVPC
 	HostedZoneConfig HostedZoneConfig
 }
 
 type ResourceRecordValue struct {
-	Value        string `xml:"Value,omitempty"`
-	HostedZoneId string `xml:"AliasTarget>HostedZoneId,omitempty"`
-	DNSName      string `xml:"AliasTarget>DNSName,omitempty"`
+	Value string `xml:"ResourceRecord>Value"`
 }
 
 type Change struct {
-	Action string                `xml:"Action"`
-	Name   string                `xml:"ResourceRecordSet>Name"`
-	Type   string                `xml:"ResourceRecordSet>Type"`
-	TTL    int                   `xml:"ResourceRecordSet>TTL,omitempty"`
-	Values []ResourceRecordValue `xml:"ResourceRecordSet>ResourceRecords>ResourceRecord"`
+	Action      string                `xml:"Action"`
+	Name        string                `xml:"ResourceRecordSet>Name"`
+	Type        string                `xml:"ResourceRecordSet>Type"`
+	TTL         int                   `xml:"ResourceRecordSet>TTL,omitempty"`
+	AliasTarget AliasTarget           `xml:"ResourceRecordSet>AliasTarget,omitempty"`
+	Values      []ResourceRecordValue `xml:"ResourceRecordSet>ResourceRecords,omitempty"`
 }
 
 type ChangeResourceRecordSetsRequest struct {
@@ -83,9 +86,29 @@ type ChangeResourceRecordSetsRequest struct {
 	Changes []Change `xml:"ChangeBatch>Changes>Change"`
 }
 
+type AssociateVPCWithHostedZoneRequest struct {
+	XMLName xml.Name `xml:"AssociateVPCWithHostedZoneRequest"`
+	Xmlns   string   `xml:"xmlns,attr"`
+	VPC     HostedZoneVPC
+	Comment string
+}
+
+type DisassociateVPCWithHostedZoneRequest struct {
+	XMLName xml.Name `xml:"DisassociateVPCWithHostedZoneRequest"`
+	Xmlns   string   `xml:"xmlns,attr"`
+	VPC     HostedZoneVPC
+	Comment string
+}
+
 type HostedZoneConfig struct {
 	XMLName xml.Name `xml:"HostedZoneConfig"`
 	Comment string
+}
+
+type HostedZoneVPC struct {
+	XMLName   xml.Name `xml:"VPC"`
+	VPCId     string
+	VPCRegion string
 }
 
 type CreateHostedZoneResponse struct {
@@ -93,6 +116,49 @@ type CreateHostedZoneResponse struct {
 	HostedZone    HostedZone
 	ChangeInfo    ChangeInfo
 	DelegationSet DelegationSet
+}
+
+type AliasTarget struct {
+	HostedZoneId         string
+	DNSName              string
+	EvaluateTargetHealth bool
+}
+
+type ResourceRecord struct {
+	XMLName xml.Name `xml:"ResourceRecord"`
+	Value   string
+}
+
+type ResourceRecords struct {
+	XMLName        xml.Name `xml:"ResourceRecords"`
+	ResourceRecord []ResourceRecord
+}
+
+type ResourceRecordSet struct {
+	XMLName         xml.Name `xml:"ResourceRecordSet"`
+	Name            string
+	Type            string
+	TTL             int
+	ResourceRecords []ResourceRecords
+	HealthCheckId   string
+	Region          string
+	Failover        string
+	AliasTarget     AliasTarget
+}
+
+type ResourceRecordSets struct {
+	XMLName           xml.Name `xml:"ResourceRecordSets"`
+	ResourceRecordSet []ResourceRecordSet
+}
+
+type ListResourceRecordSetsResponse struct {
+	XMLName              xml.Name `xml:"ListResourceRecordSetsResponse"`
+	ResourceRecordSets   []ResourceRecordSets
+	IsTruncated          bool
+	MaxItems             int
+	NextRecordName       string
+	NextRecordType       string
+	NextRecordIdentifier string
 }
 
 type ChangeResourceRecordSetsResponse struct {
@@ -123,10 +189,23 @@ type GetHostedZoneResponse struct {
 	XMLName       xml.Name `xml:"GetHostedZoneResponse"`
 	HostedZone    HostedZone
 	DelegationSet DelegationSet
+	VPCs          []HostedZoneVPC `xml:"VPCs>VPC"`
 }
 
 type DeleteHostedZoneResponse struct {
 	XMLName    xml.Name `xml:"DeleteHostedZoneResponse"`
+	Xmlns      string   `xml:"xmlns,attr"`
+	ChangeInfo ChangeInfo
+}
+
+type AssociateVPCWithHostedZoneResponse struct {
+	XMLName    xml.Name `xml:"AssociateVPCWithHostedZoneResponse"`
+	Xmlns      string   `xml:"xmlns,attr"`
+	ChangeInfo ChangeInfo
+}
+
+type DisassociateVPCWithHostedZoneResponse struct {
+	XMLName    xml.Name `xml:"DisassociateVPCWithHostedZoneResponse"`
 	Xmlns      string   `xml:"xmlns,attr"`
 	ChangeInfo ChangeInfo
 }
@@ -176,6 +255,39 @@ func (r *Route53) CreateHostedZone(hostedZoneReq *CreateHostedZoneRequest) (*Cre
 	return result, err
 }
 
+// ListResourceRecordSets fetches a collection of ResourceRecordSets through the AWS Route53 API
+func (r *Route53) ListResourceRecordSets(hostedZone string, name string, _type string, identifier string, maxitems int) (result *ListResourceRecordSetsResponse, err error) {
+	var buffer bytes.Buffer
+	addParam(&buffer, "name", name)
+	addParam(&buffer, "type", _type)
+	addParam(&buffer, "identifier", identifier)
+	if maxitems > 0 {
+		addParam(&buffer, "maxitems", strconv.Itoa(maxitems))
+	}
+	path := fmt.Sprintf("%s/%s/rrset?%s", r.Endpoint, hostedZone, buffer.String())
+
+	fmt.Println(path)
+	result = new(ListResourceRecordSetsResponse)
+	err = r.query("GET", path, nil, result)
+
+	return
+}
+
+func (response *ListResourceRecordSetsResponse) GetResourceRecordSets() []ResourceRecordSet {
+	return response.ResourceRecordSets[0].ResourceRecordSet
+}
+
+func (recordset *ResourceRecordSet) GetValues() []string {
+	if len(recordset.ResourceRecords) > 0 {
+		result := make([]string, len(recordset.ResourceRecords[0].ResourceRecord))
+		for i, record := range recordset.ResourceRecords[0].ResourceRecord {
+			result[i] = record.Value
+		}
+		return result
+	}
+	return make([]string, 0)
+}
+
 // ChangeResourceRecordSet send a change resource record request to the AWS Route53 API
 func (r *Route53) ChangeResourceRecordSet(req *ChangeResourceRecordSetsRequest, zoneId string) (*ChangeResourceRecordSetsResponse, error) {
 	xmlBytes, err := xml.Marshal(req)
@@ -223,4 +335,43 @@ func (r *Route53) DeleteHostedZone(id string) (result *DeleteHostedZoneResponse,
 	err = r.query("DELETE", path, nil, result)
 
 	return
+}
+
+// AssociateVPCWithHostedZone associates a VPC with specified private hosted zone
+func (r *Route53) AssociateVPCWithHostedZone(zoneid string, req *AssociateVPCWithHostedZoneRequest) (result *AssociateVPCWithHostedZoneResponse, err error) {
+	xmlBytes, err := xml.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	xmlBytes = []byte(xml.Header + string(xmlBytes))
+	path := fmt.Sprintf("%s/%s/associatevpc", r.Endpoint, zoneid)
+	result = new(AssociateVPCWithHostedZoneResponse)
+	err = r.query("POST", path, bytes.NewBuffer(xmlBytes), result)
+
+	return
+}
+
+// DisassociateVPCWithHostedZone disassociates a VPC from specified private hosted zone
+func (r *Route53) DisassociateVPCWithHostedZone(zoneid string, req *DisassociateVPCWithHostedZoneRequest) (result *DisassociateVPCWithHostedZoneResponse, err error) {
+	xmlBytes, err := xml.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	xmlBytes = []byte(xml.Header + string(xmlBytes))
+	path := fmt.Sprintf("%s/%s/disassociatevpc", r.Endpoint, zoneid)
+	result = new(DisassociateVPCWithHostedZoneResponse)
+	err = r.query("POST", path, bytes.NewBuffer(xmlBytes), result)
+
+	return
+}
+
+func addParam(buffer *bytes.Buffer, name, value string) {
+	if value != "" {
+		if buffer.Len() > 0 {
+			buffer.WriteString("&")
+		}
+		buffer.WriteString(fmt.Sprintf("%s=%s", name, value))
+	}
 }

@@ -1,3 +1,10 @@
+# News
+We are putting together plans for future changes. We obviously depend on all of you to take part in the planning for the future of goamz and execution of the plans. Other than the regulare 'issues' and 'pull requests' please also have a look at TODO.md.
+It is inevitable that there will be backward incompatible changes. Please subscribe to the google group to get all the news (it will only be used for announcements, all the technical discussions will happen on github).
+Google group: https://groups.google.com/forum/#!forum/goamz-announcements
+
+
+
 # GoAMZ
 
 The _goamz_ package enables Go programs to interact with Amazon Web Services.
@@ -15,11 +22,13 @@ github.com/coreos/goamz/dynamodb
 github.com/coreos/goamz/ec2
 github.com/coreos/goamz/elb
 github.com/coreos/goamz/iam
+github.com/coreos/goamz/kinesis
 github.com/coreos/goamz/s3
 github.com/coreos/goamz/sqs
+github.com/coreos/goamz/sns
+
 github.com/coreos/goamz/exp/mturk
 github.com/coreos/goamz/exp/sdb
-github.com/coreos/goamz/exp/sns
 ```
 
 Packages under `exp/` are still in an experimental or unfinished/unpolished state.

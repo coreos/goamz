@@ -1,14 +1,15 @@
 package ec2_test
 
-var ErrorDump = `
+var (
+	ErrorDump = `
 <?xml version="1.0" encoding="UTF-8"?>
 <Response><Errors><Error><Code>UnsupportedOperation</Code>
 <Message>AMIs with an instance-store root device are not supported for the instance type 't1.micro'.</Message>
 </Error></Errors><RequestID>0503f4e9-bbd6-483c-b54f-c4ae9f3b30f4</RequestID></Response>
 `
 
-// http://goo.gl/Mcm3b
-var RunInstancesExample = `
+	// http://goo.gl/Mcm3b
+	RunInstancesExample = `
 <RunInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <reservationId>r-47a5402e</reservationId>
@@ -96,8 +97,8 @@ var RunInstancesExample = `
 </RunInstancesResponse>
 `
 
-// http://goo.gl/3BKHj
-var TerminateInstancesExample = `
+	// http://goo.gl/3BKHj
+	TerminateInstancesExample = `
 <TerminateInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <instancesSet>
@@ -116,8 +117,8 @@ var TerminateInstancesExample = `
 </TerminateInstancesResponse>
 `
 
-// http://goo.gl/mLbmw
-var DescribeInstancesExample1 = `
+	// http://goo.gl/mLbmw
+	DescribeInstancesExample1 = `
 <DescribeInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>98e3c9a4-848c-4d6d-8e8a-b1bdEXAMPLE</requestId>
   <reservationSet>
@@ -245,8 +246,8 @@ var DescribeInstancesExample1 = `
 </DescribeInstancesResponse>
 `
 
-// http://goo.gl/mLbmw
-var DescribeInstancesExample2 = `
+	// http://goo.gl/mLbmw
+	DescribeInstancesExample2 = `
 <DescribeInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <reservationSet>
@@ -318,8 +319,8 @@ var DescribeInstancesExample2 = `
 </DescribeInstancesResponse>
 `
 
-//http://goo.gl/zW7J4p
-var DescribeAddressesExample = `
+	//http://goo.gl/zW7J4p
+	DescribeAddressesExample = `
 <DescribeAddressesResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <addressesSet>
@@ -347,7 +348,7 @@ var DescribeAddressesExample = `
 </DescribeAddressesResponse>
 `
 
-var DescribeAddressesAllocationIdExample = `
+	DescribeAddressesAllocationIdExample = `
 <DescribeAddressesResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <addressesSet>
@@ -375,8 +376,8 @@ var DescribeAddressesAllocationIdExample = `
 </DescribeAddressesResponse>
 `
 
-//http://goo.gl/aLPmbm
-var AllocateAddressExample = `
+	//http://goo.gl/aLPmbm
+	AllocateAddressExample = `
 <AllocateAddressResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <publicIp>198.51.100.1</publicIp>
@@ -385,16 +386,16 @@ var AllocateAddressExample = `
 </AllocateAddressResponse>
 `
 
-//http://goo.gl/Ciw2Z8
-var ReleaseAddressExample = `
+	//http://goo.gl/Ciw2Z8
+	ReleaseAddressExample = `
 <ReleaseAddressResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <return>true</return>
 </ReleaseAddressResponse>
 `
 
-//http://goo.gl/hhj4z7
-var AssociateAddressExample = `
+	//http://goo.gl/hhj4z7
+	AssociateAddressExample = `
 <AssociateAddressResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <return>true</return>
@@ -402,16 +403,16 @@ var AssociateAddressExample = `
 </AssociateAddressResponse>
 `
 
-//http://goo.gl/Dapkuz
-var DiassociateAddressExample = `
+	//http://goo.gl/Dapkuz
+	DiassociateAddressExample = `
 <ReleaseAddressResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <return>true</return>
 </ReleaseAddressResponse>
 `
 
-// http://goo.gl/V0U25
-var DescribeImagesExample = `
+	// http://goo.gl/V0U25
+	DescribeImagesExample = `
 <DescribeImagesResponse xmlns="http://ec2.amazonaws.com/doc/2012-08-15/">
          <requestId>4a4a27a2-2e7c-475d-b35b-ca822EXAMPLE</requestId>
     <imagesSet>
@@ -458,8 +459,8 @@ var DescribeImagesExample = `
 </DescribeImagesResponse>
 `
 
-// http://goo.gl/ttcda
-var CreateSnapshotExample = `
+	// http://goo.gl/ttcda
+	CreateSnapshotExample = `
 <CreateSnapshotResponse xmlns="http://ec2.amazonaws.com/doc/2012-10-01/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <snapshotId>snap-78a54011</snapshotId>
@@ -473,16 +474,16 @@ var CreateSnapshotExample = `
 </CreateSnapshotResponse>
 `
 
-// http://goo.gl/vwU1y
-var DeleteSnapshotExample = `
+	// http://goo.gl/vwU1y
+	DeleteSnapshotExample = `
 <DeleteSnapshotResponse xmlns="http://ec2.amazonaws.com/doc/2012-10-01/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <return>true</return>
 </DeleteSnapshotResponse>
 `
 
-// http://goo.gl/nkovs
-var DescribeSnapshotsExample = `
+	// http://goo.gl/nkovs
+	DescribeSnapshotsExample = `
 <DescribeSnapshotsResponse xmlns="http://ec2.amazonaws.com/doc/2012-10-01/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <snapshotSet>
@@ -506,8 +507,76 @@ var DescribeSnapshotsExample = `
 </DescribeSnapshotsResponse>
 `
 
-// http://goo.gl/Eo7Yl
-var CreateSecurityGroupExample = `
+	DescribeSubnetsExample = `
+<DescribeSubnetsResponse xmlns="http://ec2.amazonaws.com/doc/2014-02-01/">
+    <requestId>a5266c3e-2b7a-4434-971e-317b6EXAMPLE</requestId>
+    <subnetSet>
+        <item>
+            <subnetId>subnet-3e993755</subnetId>
+            <state>available</state>
+            <vpcId>vpc-f84a9b93</vpcId>
+            <cidrBlock>10.0.12.0/24</cidrBlock>
+            <availableIpAddressCount>249</availableIpAddressCount>
+            <availabilityZone>us-west-2c</availabilityZone>
+            <defaultForAz>false</defaultForAz>
+            <mapPublicIpOnLaunch>false</mapPublicIpOnLaunch>
+            <tagSet>
+                <item>
+                    <key>visibility</key>
+                    <value>private</value>
+                </item>
+                <item>
+                    <key>Name</key>
+                    <value>application</value>
+                </item>
+            </tagSet>
+        </item>
+        <item>
+            <subnetId>subnet-f44a8b9f</subnetId>
+            <state>available</state>
+            <vpcId>vpc-f84a9b93</vpcId>
+            <cidrBlock>10.0.10.0/24</cidrBlock>
+            <availableIpAddressCount>248</availableIpAddressCount>
+            <availabilityZone>us-west-2a</availabilityZone>
+            <defaultForAz>false</defaultForAz>
+            <mapPublicIpOnLaunch>false</mapPublicIpOnLaunch>
+            <tagSet>
+                <item>
+                    <key>Name</key>
+                    <value>application</value>
+                </item>
+                <item>
+                    <key>visibility</key>
+                    <value>private</value>
+                </item>
+            </tagSet>
+        </item>
+        <item>
+            <subnetId>subnet-7599371e</subnetId>
+            <state>available</state>
+            <vpcId>vpc-f84a1b93</vpcId>
+            <cidrBlock>10.0.11.0/24</cidrBlock>
+            <availableIpAddressCount>246</availableIpAddressCount>
+            <availabilityZone>us-west-2b</availabilityZone>
+            <defaultForAz>false</defaultForAz>
+            <mapPublicIpOnLaunch>false</mapPublicIpOnLaunch>
+            <tagSet>
+                <item>
+                    <key>visibility</key>
+                    <value>private</value>
+                </item>
+                <item>
+                    <key>Name</key>
+                    <value>application</value>
+                </item>
+            </tagSet>
+        </item>
+    </subnetSet>
+</DescribeSubnetsResponse>
+`
+
+	// http://goo.gl/Eo7Yl
+	CreateSecurityGroupExample = `
 <CreateSecurityGroupResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <return>true</return>
@@ -515,8 +584,8 @@ var CreateSecurityGroupExample = `
 </CreateSecurityGroupResponse>
 `
 
-// http://goo.gl/k12Uy
-var DescribeSecurityGroupsExample = `
+	// http://goo.gl/k12Uy
+	DescribeSecurityGroupsExample = `
 <DescribeSecurityGroupsResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <securityGroupInfo>
@@ -558,8 +627,70 @@ var DescribeSecurityGroupsExample = `
 </DescribeSecurityGroupsResponse>
 `
 
-// A dump which includes groups within ip permissions.
-var DescribeSecurityGroupsDump = `
+	SecurityGroupsVPCExample = `
+<DescribeSecurityGroupsResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
+  <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
+  <securityGroupInfo>
+    <item>
+      <ownerId>999988887777</ownerId>
+      <groupName>WebServers</groupName>
+      <groupId>sg-67ad940e</groupId>
+      <groupDescription>Web Servers</groupDescription>
+      <ipPermissions>
+        <item>
+           <ipProtocol>tcp</ipProtocol>
+           <fromPort>80</fromPort>
+           <toPort>80</toPort>
+           <groups/>
+           <ipRanges>
+             <item>
+               <cidrIp>0.0.0.0/0</cidrIp>
+             </item>
+           </ipRanges>
+        </item>
+      </ipPermissions>
+      <ipPermissionsEgress>
+        <item>
+          <ipProtocol>tcp</ipProtocol>
+           <fromPort>22</fromPort>
+           <toPort>22</toPort>
+           <groups/>
+           <ipRanges>
+             <item>
+               <cidrIp>10.0.0.0/8</cidrIp>
+             </item>
+           </ipRanges>
+        </item>
+      </ipPermissionsEgress>
+    </item>
+    <item>
+      <ownerId>999988887777</ownerId>
+      <groupName>RangedPortsBySource</groupName>
+      <groupId>sg-76abc467</groupId>
+      <groupDescription>Group A</groupDescription>
+      <ipPermissions>
+        <item>
+           <ipProtocol>tcp</ipProtocol>
+           <fromPort>6000</fromPort>
+           <toPort>7000</toPort>
+           <groups/>
+           <ipRanges/>
+        </item>
+      </ipPermissions>
+      <vpcId>vpc-12345678</vpcId>
+      <tagSet>
+        <item>
+          <key>key</key>
+          <value>value</value>
+        </item>
+      </tagSet>
+    </item>
+  </securityGroupInfo>
+</DescribeSecurityGroupsResponse>  
+`
+
+	// A dump which includes groups within ip permissions.
+	DescribeSecurityGroupsDump = `
 <?xml version="1.0" encoding="UTF-8"?>
 <DescribeSecurityGroupsResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
     <requestId>87b92b57-cc6e-48b2-943f-f6f0e5c9f46c</requestId>
@@ -601,40 +732,85 @@ var DescribeSecurityGroupsDump = `
 </DescribeSecurityGroupsResponse>
 `
 
-// http://goo.gl/QJJDO
-var DeleteSecurityGroupExample = `
+	// http://goo.gl/QJJDO
+	DeleteSecurityGroupExample = `
 <DeleteSecurityGroupResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <return>true</return>
 </DeleteSecurityGroupResponse>
 `
 
-// http://goo.gl/u2sDJ
-var AuthorizeSecurityGroupIngressExample = `
+	// http://goo.gl/u2sDJ
+	AuthorizeSecurityGroupIngressExample = `
 <AuthorizeSecurityGroupIngressResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <return>true</return>
 </AuthorizeSecurityGroupIngressResponse>
 `
 
-// http://goo.gl/Mz7xr
-var RevokeSecurityGroupIngressExample = `
+	// http://goo.gl/Mz7xr
+	RevokeSecurityGroupIngressExample = `
 <RevokeSecurityGroupIngressResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <return>true</return>
 </RevokeSecurityGroupIngressResponse>
 `
 
-// http://goo.gl/Vmkqc
-var CreateTagsExample = `
+	// http://goo.gl/Vmkqc
+	CreateTagsExample = `
 <CreateTagsResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
    <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <return>true</return>
 </CreateTagsResponse>
 `
 
-// http://goo.gl/awKeF
-var StartInstancesExample = `
+	// http://goo.gl/hgJjO7
+	DescribeTagsExample = `
+<DescribeTagsResponse xmlns="http://ec2.amazonaws.com/doc/2014-06-15/">
+   <requestId>7a62c49f-347e-4fc4-9331-6e8eEXAMPLE</requestId>
+   <tagSet>
+      <item>
+         <resourceId>ami-1a2b3c4d</resourceId>
+         <resourceType>image</resourceType>
+         <key>webserver</key>
+         <value/>
+      </item>
+       <item>
+         <resourceId>ami-1a2b3c4d</resourceId>
+         <resourceType>image</resourceType>
+         <key>stack</key>
+         <value>Production</value>
+      </item>
+      <item>
+         <resourceId>i-5f4e3d2a</resourceId>
+         <resourceType>instance</resourceType>
+         <key>webserver</key>
+         <value/>
+      </item>
+       <item>
+         <resourceId>i-5f4e3d2a</resourceId>
+         <resourceType>instance</resourceType>
+         <key>stack</key>
+         <value>Production</value>
+      </item>
+      <item>
+         <resourceId>i-12345678</resourceId>
+         <resourceType>instance</resourceType>
+         <key>database_server</key>
+         <value/>
+      </item>
+       <item>
+         <resourceId>i-12345678</resourceId>
+         <resourceType>instance</resourceType>
+         <key>stack</key>
+         <value>Test</value>
+      </item>
+    </tagSet>
+</DescribeTagsResponse>
+`
+
+	// http://goo.gl/awKeF
+	StartInstancesExample = `
 <StartInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <instancesSet>
@@ -653,8 +829,8 @@ var StartInstancesExample = `
 </StartInstancesResponse>
 `
 
-// http://goo.gl/436dJ
-var StopInstancesExample = `
+	// http://goo.gl/436dJ
+	StopInstancesExample = `
 <StopInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <instancesSet>
@@ -673,17 +849,17 @@ var StopInstancesExample = `
 </StopInstancesResponse>
 `
 
-// http://goo.gl/baoUf
-var RebootInstancesExample = `
+	// http://goo.gl/baoUf
+	RebootInstancesExample = `
 <RebootInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2011-12-15/">
   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
   <return>true</return>
 </RebootInstancesResponse>
 `
 
-var DescribeReservedInstancesExample = `
+	DescribeReservedInstancesExample = `
 <DescribeReservedInstancesResponse xmlns="http://ec2.amazonaws.com/doc/2014-06-15/">
-   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId> 
+   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
    <reservedInstancesSet>
       <item>
          <reservedInstancesId>e5a2ff3b-7d14-494f-90af-0b5d0EXAMPLE</reservedInstancesId>
@@ -694,12 +870,277 @@ var DescribeReservedInstancesExample = `
          <usagePrice>0.034</usagePrice>
          <instanceCount>3</instanceCount>
          <productDescription>Linux/UNIX</productDescription>
-         <state>active</state> 
+         <state>active</state>
          <instanceTenancy>default</instanceTenancy>
          <currencyCode>USD</currencyCode>
          <offeringType>Light Utilization</offeringType>
          <recurringCharges/>
       </item>
-   </reservedInstancesSet> 
+   </reservedInstancesSet>
 </DescribeReservedInstancesResponse>
 `
+	DeregisterImageExample = `
+<DeregisterImageResponse xmlns="http://ec2.amazonaws.com/doc/2014-06-15/">
+  <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
+  <return>true</return>
+</DeregisterImageResponse>
+`
+	DescribeInstanceStatusExample = `
+<DescribeInstanceStatusResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+    <requestId>3be1508e-c444-4fef-89cc-0b1223c4f02fEXAMPLE</requestId>
+    <instanceStatusSet>
+        <item>
+            <instanceId>i-1a2b3c4d</instanceId>
+            <availabilityZone>us-east-1d</availabilityZone>
+            <instanceState>
+                <code>16</code>
+                <name>running</name>
+            </instanceState>
+            <systemStatus>
+                <status>impaired</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>failed</status>
+                        <impairedSince>YYYY-MM-DDTHH:MM:SS.000Z</impairedSince>
+                    </item>
+                </details>
+            </systemStatus>
+            <instanceStatus>
+                <status>impaired</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>failed</status>
+                        <impairedSince>YYYY-MM-DDTHH:MM:SS.000Z</impairedSince>
+                    </item>
+                </details>
+            </instanceStatus>
+            <eventsSet>
+              <item>
+                <code>instance-retirement</code>
+                <description>The instance is running on degraded hardware</description>
+                <notBefore>YYYY-MM-DDTHH:MM:SS+0000</notBefore>
+                <notAfter>YYYY-MM-DDTHH:MM:SS+0000</notAfter>
+              </item>
+            </eventsSet>
+        </item>
+        <item>
+            <instanceId>i-2a2b3c4d</instanceId>
+            <availabilityZone>us-east-1d</availabilityZone>
+            <instanceState>
+                <code>16</code>
+                <name>running</name>
+            </instanceState>
+            <systemStatus>
+                <status>ok</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>passed</status>
+                    </item>
+                </details>
+            </systemStatus>
+            <instanceStatus>
+                <status>ok</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>passed</status>
+                    </item>
+                </details>
+            </instanceStatus>
+            <eventsSet>
+              <item>
+                <code>instance-reboot</code>
+                <description>The instance is scheduled for a reboot</description>
+                <notBefore>YYYY-MM-DDTHH:MM:SS+0000</notBefore>
+                <notAfter>YYYY-MM-DDTHH:MM:SS+0000</notAfter>
+              </item>
+            </eventsSet>
+        </item>
+        <item>
+            <instanceId>i-3a2b3c4d</instanceId>
+            <availabilityZone>us-east-1c</availabilityZone>
+            <instanceState>
+                <code>16</code>
+                <name>running</name>
+            </instanceState>
+            <systemStatus>
+                <status>ok</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>passed</status>
+                    </item>
+                </details>
+            </systemStatus>
+            <instanceStatus>
+                <status>ok</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>passed</status>
+                    </item>
+                </details>
+            </instanceStatus>
+        </item>
+        <item>
+            <instanceId>i-4a2b3c4d</instanceId>
+            <availabilityZone>us-east-1c</availabilityZone>
+            <instanceState>
+                <code>16</code>
+                <name>running</name>
+            </instanceState>
+            <systemStatus>
+                <status>ok</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>passed</status>
+                    </item>
+                </details>
+            </systemStatus>
+            <instanceStatus>
+                <status>insufficient-data</status>
+                <details>
+                    <item>
+                        <name>reachability</name>
+                        <status>insufficient-data</status>
+                    </item>
+                </details>
+            </instanceStatus>
+         </item>
+    </instanceStatusSet>
+</DescribeInstanceStatusResponse>
+`
+
+	DescribeVolumesExample = `
+<DescribeVolumesResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId> 
+   <volumeSet>
+      <item>
+         <volumeId>vol-1a2b3c4d</volumeId>
+         <size>80</size>
+         <snapshotId/>
+         <availabilityZone>us-east-1a</availabilityZone>
+         <status>in-use</status>
+         <createTime>YYYY-MM-DDTHH:MM:SS.SSSZ</createTime>
+         <attachmentSet>
+            <item>
+               <volumeId>vol-1a2b3c4d</volumeId>
+               <instanceId>i-1a2b3c4d</instanceId>
+               <device>/dev/sdh</device>
+               <status>attached</status>
+               <attachTime>YYYY-MM-DDTHH:MM:SS.SSSZ</attachTime>
+               <deleteOnTermination>false</deleteOnTermination>
+            </item>
+         </attachmentSet>
+         <volumeType>standard</volumeType>
+         <encrypted>true</encrypted>
+      </item>
+   </volumeSet>
+</DescribeVolumesResponse>
+`
+
+	AttachVolumeExample = `
+<AttachVolumeResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+  <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
+  <volumeId>vol-1a2b3c4d</volumeId>
+  <instanceId>i-1a2b3c4d</instanceId>
+  <device>/dev/sdh</device>
+  <status>attaching</status>
+  <attachTime>YYYY-MM-DDTHH:MM:SS.000Z</attachTime>
+</AttachVolumeResponse>
+`
+
+	CreateVolumeExample = `
+<CreateVolumeResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+	<requestId>0c67a4c9-d7ec-45ef-8016-bf666EXAMPLE</requestId>
+	<volumeId>vol-2a21e543</volumeId>
+	<size>1</size>
+	<snapshotId/>
+	<availabilityZone>us-east-1a</availabilityZone>
+	<status>creating</status>
+	<createTime>2009-12-28T05:42:53.000Z</createTime>
+	<volumeType>standard</volumeType>
+	<iops>0</iops>
+	<encrypted>false</encrypted>
+</CreateVolumeResponse>
+`
+
+	DescribeVpcsExample = `
+<DescribeVpcsResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+  <requestId>7a62c49f-347e-4fc4-9331-6e8eEXAMPLE</requestId>
+  <vpcSet>
+    <item>
+      <vpcId>vpc-1a2b3c4d</vpcId>
+      <state>available</state>
+      <cidrBlock>10.0.0.0/23</cidrBlock>    
+      <dhcpOptionsId>dopt-7a8b9c2d</dhcpOptionsId> 
+      <instanceTenancy>default</instanceTenancy>
+      <isDefault>false</isDefault>
+      <tagSet/>
+    </item>
+  </vpcSet>
+</DescribeVpcsResponse>
+`
+
+	DescribeVpnConnectionsExample = `
+<DescribeVpnConnectionsResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+  <requestId>7a62c49f-347e-4fc4-9331-6e8eEXAMPLE</requestId>
+  <vpnConnectionSet>
+    <item>
+      <vpnConnectionId>vpn-44a8938f</vpnConnectionId>
+      <state>available</state>
+      <customerGatewayConfiguration>
+          ...Customer gateway configuration data in escaped XML format...
+      </customerGatewayConfiguration>     
+      <type>ipsec.1</type>
+      <customerGatewayId>cgw-b4dc3961</customerGatewayId>
+      <vpnGatewayId>vgw-8db04f81</vpnGatewayId>
+      <tagSet/>
+    </item>
+  </vpnConnectionSet>
+</DescribeVpnConnectionsResponse>
+`
+
+	DescribeVpnGatewaysExample = `
+<DescribeVpnGatewaysResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+  <requestId>7a62c49f-347e-4fc4-9331-6e8eEXAMPLE</requestId>
+  <vpnGatewaySet>	
+    <item>
+      <vpnGatewayId>vgw-8db04f81</vpnGatewayId>
+      <state>available</state>
+      <type>ipsec.1</type>
+      <availabilityZone>us-east-1a</availabilityZone> 
+      <attachments>
+        <item>
+          <vpcId>vpc-1a2b3c4d</vpcId>
+          <state>attached</state>
+        </item>
+      </attachments>
+      <tagSet/>
+    </item>
+  </vpnGatewaySet>
+</DescribeVpnGatewaysResponse>
+`
+
+	DescribeInternetGatewaysExample = `
+<DescribeInternetGatewaysResponse xmlns="http://ec2.amazonaws.com/doc/2014-09-01/">
+   <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId> 
+   <internetGatewaySet>  
+      <item>
+         <internetGatewayId>igw-eaad4883EXAMPLE</internetGatewayId>
+         <attachmentSet>
+            <item>
+               <vpcId>vpc-11ad4878</vpcId>
+               <state>available</state>
+            </item>
+         </attachmentSet>
+         <tagSet/>
+      </item>
+   </internetGatewaySet>
+</DescribeInternetGatewaysResponse>
+`
+)

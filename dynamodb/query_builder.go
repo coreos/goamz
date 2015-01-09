@@ -2,27 +2,35 @@ package dynamodb
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
 )
 
 type msi map[string]interface{}
-type Query struct {
+type UntypedQuery struct {
 	buffer msi
+	table  *Table
 }
 
-func NewEmptyQuery() *Query {
-	return &Query{msi{}}
+func NewEmptyQuery() *UntypedQuery {
+	return &UntypedQuery{msi{}, nil}
 }
 
-func NewQuery(t *Table) *Query {
-	q := &Query{msi{}}
+func NewQuery(t *Table) *UntypedQuery {
+	q := &UntypedQuery{msi{}, t}
 	q.addTable(t)
 	return q
 }
 
 // This way of specifing the key is used when doing a Get.
 // If rangeKey is "", it is assumed to not want to be used
-func (q *Query) AddKey(t *Table, key *Key) {
-	k := t.Key
+func (q *UntypedQuery) AddKey(key *Key) error {
+	if q.table == nil {
+		return errors.New("Table is nil")
+	}
+	k := q.table.Key
 	keymap := msi{
 		k.KeyAttribute.Name: msi{
 			k.KeyAttribute.Type: key.HashKey},
@@ -32,10 +40,22 @@ func (q *Query) AddKey(t *Table, key *Key) {
 	}
 
 	q.buffer["Key"] = keymap
+	return nil
 }
 
-func (q *Query) AddExclusiveStartKey(t *Table, key *Key) {
-	q.buffer["ExclusiveStartKey"] = keyAttributes(t, key)
+func (q *UntypedQuery) AddExclusiveStartKey(key *Key) error {
+	if q.table == nil {
+		return errors.New("Table is nil")
+	}
+	q.buffer["ExclusiveStartKey"] = keyAttributes(q.table, key)
+	return nil
+}
+
+func (q *UntypedQuery) AddExclusiveStartTableName(table string) error {
+	if table != "" {
+		q.buffer["ExclusiveStartTableName"] = table
+	}
+	return nil
 }
 
 func keyAttributes(t *Table, key *Key) msi {
@@ -49,7 +69,7 @@ func keyAttributes(t *Table, key *Key) msi {
 	return out
 }
 
-func (q *Query) AddAttributesToGet(attributes []string) {
+func (q *UntypedQuery) AddAttributesToGet(attributes []string) {
 	if len(attributes) == 0 {
 		return
 	}
@@ -57,13 +77,14 @@ func (q *Query) AddAttributesToGet(attributes []string) {
 	q.buffer["AttributesToGet"] = attributes
 }
 
-func (q *Query) ConsistentRead(c bool) {
+func (q *UntypedQuery) SetConsistentRead(c bool) error {
 	if c == true {
 		q.buffer["ConsistentRead"] = "true" //String "true", not bool true
 	}
+	return nil
 }
 
-func (q *Query) AddGetRequestItems(tableKeys map[*Table][]Key) {
+func (q *UntypedQuery) AddGetRequestItems(tableKeys map[*Table][]Key) {
 	requestitems := msi{}
 	for table, keys := range tableKeys {
 		keyslist := []msi{}
@@ -75,7 +96,7 @@ func (q *Query) AddGetRequestItems(tableKeys map[*Table][]Key) {
 	q.buffer["RequestItems"] = requestitems
 }
 
-func (q *Query) AddWriteRequestItems(tableItems map[*Table]map[string][][]Attribute) {
+func (q *UntypedQuery) AddWriteRequestItems(tableItems map[*Table]map[string][][]Attribute) {
 	b := q.buffer
 
 	b["RequestItems"] = func() msi {
@@ -83,7 +104,18 @@ func (q *Query) AddWriteRequestItems(tableItems map[*Table]map[string][][]Attrib
 		for table, itemActions := range tableItems {
 			out[table.Name] = func() interface{} {
 				out2 := []interface{}{}
-				for action, items := range itemActions {
+
+				// here breaks an order of array....
+				// For now, we iterate over sorted key by action for stable testing
+				keys := []string{}
+				for k := range itemActions {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+
+				for ki := range keys {
+					action := keys[ki]
+					items := itemActions[action]
 					for _, attributes := range items {
 						Item_or_Key := map[bool]string{true: "Item", false: "Key"}[action == "Put"]
 						out2 = append(out2, msi{action + "Request": msi{Item_or_Key: attributeList(attributes)}})
@@ -96,7 +128,7 @@ func (q *Query) AddWriteRequestItems(tableItems map[*Table]map[string][][]Attrib
 	}()
 }
 
-func (q *Query) AddCreateRequestTable(description TableDescriptionT) {
+func (q *UntypedQuery) AddCreateRequestTable(description TableDescriptionT) {
 	b := q.buffer
 
 	attDefs := []interface{}{}
@@ -147,24 +179,36 @@ func (q *Query) AddCreateRequestTable(description TableDescriptionT) {
 	}
 }
 
-func (q *Query) AddDeleteRequestTable(description TableDescriptionT) {
+func (q *UntypedQuery) AddDeleteRequestTable(description TableDescriptionT) {
 	b := q.buffer
 	b["TableName"] = description.TableName
 }
 
-func (q *Query) AddKeyConditions(comparisons []AttributeComparison) {
+func (q *UntypedQuery) AddKeyConditions(comparisons []AttributeComparison) {
 	q.buffer["KeyConditions"] = buildComparisons(comparisons)
 }
 
-func (q *Query) AddLimit(limit int64) {
+func (q *UntypedQuery) AddQueryFilter(comparisons []AttributeComparison) {
+	q.buffer["QueryFilter"] = buildComparisons(comparisons)
+}
+
+func (q *UntypedQuery) AddLimit(limit int64) {
 	q.buffer["Limit"] = limit
 }
-func (q *Query) AddSelect(value string) {
+func (q *UntypedQuery) AddSelect(value string) {
 	q.buffer["Select"] = value
 }
 
-func (q *Query) AddIndex(value string) {
+func (q *UntypedQuery) AddIndex(value string) {
 	q.buffer["IndexName"] = value
+}
+
+func (q *UntypedQuery) AddScanIndexForward(val bool) {
+	if val {
+		q.buffer["ScanIndexForward"] = "true"
+	} else {
+		q.buffer["ScanIndexForward"] = "false"
+	}
 }
 
 /*
@@ -172,11 +216,11 @@ func (q *Query) AddIndex(value string) {
        "AttributeName1":{"AttributeValueList":[{"S":"AttributeValue"}],"ComparisonOperator":"EQ"}
    },
 */
-func (q *Query) AddScanFilter(comparisons []AttributeComparison) {
+func (q *UntypedQuery) AddScanFilter(comparisons []AttributeComparison) {
 	q.buffer["ScanFilter"] = buildComparisons(comparisons)
 }
 
-func (q *Query) AddParallelScanConfiguration(segment int, totalSegments int) {
+func (q *UntypedQuery) AddParallelScanConfiguration(segment int, totalSegments int) {
 	q.buffer["Segment"] = segment
 	q.buffer["TotalSegments"] = totalSegments
 }
@@ -199,63 +243,183 @@ func buildComparisons(comparisons []AttributeComparison) msi {
 }
 
 // The primary key must be included in attributes.
-func (q *Query) AddItem(attributes []Attribute) {
+func (q *UntypedQuery) AddItem(attributes []Attribute) {
 	q.buffer["Item"] = attributeList(attributes)
 }
 
-func (q *Query) AddUpdates(attributes []Attribute, action string) {
-	updates := msi{}
-	for _, a := range attributes {
-		au := msi{
-			"Value": msi{
-				a.Type: map[bool]interface{}{true: a.SetValues, false: a.Value}[a.SetType()],
-			},
-			"Action": action,
-		}
-		// Delete 'Value' from AttributeUpdates if Type is not Set
-		if action == "DELETE" && !a.SetType() {
-			delete(au, "Value")
-		}
-		updates[a.Name] = au
-	}
-
-	q.buffer["AttributeUpdates"] = updates
+// New syntax for conditions, filtering, and projection:
+// http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.html
+// Replaces the legacy conditional parameters:
+// http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LegacyConditionalParameters.html
+//
+// Note that some DynamoDB actions can take two kinds of expression;
+// for example, UpdateItem can have both a ConditionalExpression and UpdateExpression,
+// while Scan can have both a FilterExpression and ProjectionExpression,
+// so the Add*Expression() functions need to share the ExpressionAttributeNames
+// and ExpressionAttribute values query attributes.
+type Expression struct {
+	Text            string
+	AttributeNames  map[string]string
+	AttributeValues []Attribute
 }
 
-func (q *Query) AddExpected(attributes []Attribute) {
-	expected := msi{}
-	for _, a := range attributes {
-		value := msi{}
-		if a.Exists != "" {
-			value["Exists"] = a.Exists
+func (q *UntypedQuery) addExpressionAttributeNames(e *Expression) {
+	expressionAttributeNames := msi{}
+	if existing, ok := q.buffer["ExpressionAttributeNames"]; ok {
+		for k, v := range existing.(msi) {
+			expressionAttributeNames[k] = v
 		}
-		// If set Exists to false, we must remove Value
-		if value["Exists"] != "false" {
-			value["Value"] = msi{a.Type: map[bool]interface{}{true: a.SetValues, false: a.Value}[a.SetType()]}
-		}
-		expected[a.Name] = value
 	}
-	q.buffer["Expected"] = expected
+	for k, v := range e.AttributeNames {
+		expressionAttributeNames[k] = v
+	}
+	if len(expressionAttributeNames) > 0 {
+		q.buffer["ExpressionAttributeNames"] = expressionAttributeNames
+	}
+}
+
+func (q *UntypedQuery) addExpressionAttributeValues(e *Expression) {
+	expressionAttributeValues := msi{}
+	if existing, ok := q.buffer["ExpressionAttributeValues"]; ok {
+		for k, v := range existing.(msi) {
+			expressionAttributeValues[k] = v
+		}
+	}
+	for k, v := range attributeList(e.AttributeValues) {
+		expressionAttributeValues[k] = v
+	}
+	if len(expressionAttributeValues) > 0 {
+		q.buffer["ExpressionAttributeValues"] = expressionAttributeValues
+	}
+}
+
+func (q *UntypedQuery) AddConditionExpression(e *Expression) {
+	q.buffer["ConditionExpression"] = e.Text
+	q.addExpressionAttributeNames(e)
+	q.addExpressionAttributeValues(e)
+}
+
+func (q *UntypedQuery) AddFilterExpression(e *Expression) {
+	q.buffer["FilterExpression"] = e.Text
+	q.addExpressionAttributeNames(e)
+	q.addExpressionAttributeValues(e)
+}
+
+func (q *UntypedQuery) AddProjectionExpression(e *Expression) {
+	q.buffer["ProjectionExpression"] = e.Text
+	q.addExpressionAttributeNames(e)
+	// projection expressions don't have expression attribute values
+}
+
+func (q *UntypedQuery) AddUpdateExpression(e *Expression) {
+	q.buffer["UpdateExpression"] = e.Text
+	q.addExpressionAttributeNames(e)
+	q.addExpressionAttributeValues(e)
+}
+
+func (q *UntypedQuery) AddUpdates(attributes []Attribute, action string) {
+	// You can't mix expressions and older mechanisms,
+	// so this reimplements AttributeUpdates using UpdateExpression.
+	e := &Expression{
+		AttributeNames: map[string]string{},
+	}
+	sections := map[string][]string{
+		"SET":    []string{},
+		"ADD":    []string{},
+		"DELETE": []string{},
+		"REMOVE": []string{},
+	}
+	attrIndex := 0
+	for _, a := range attributes {
+		namePlaceholder := fmt.Sprintf("#Updates%d", attrIndex)
+		valuePlaceholder := fmt.Sprintf(":Updates%d", attrIndex)
+		attrIndex++
+
+		e.AttributeNames[namePlaceholder] = a.Name
+		renamedAttr := a
+		renamedAttr.Name = valuePlaceholder
+
+		section := ""
+		update := ""
+		switch action {
+		case "PUT":
+			section = "SET"
+			update = fmt.Sprintf("%s=%s", namePlaceholder, valuePlaceholder)
+			e.AttributeValues = append(e.AttributeValues, renamedAttr)
+		case "ADD":
+			section = "ADD"
+			update = fmt.Sprintf("%s %s", namePlaceholder, valuePlaceholder)
+			e.AttributeValues = append(e.AttributeValues, renamedAttr)
+		case "DELETE":
+			if a.SetType() {
+				section = "DELETE"
+				update = fmt.Sprintf("%s %s", namePlaceholder, valuePlaceholder)
+				e.AttributeValues = append(e.AttributeValues, renamedAttr)
+			} else {
+				section = "REMOVE"
+				update = namePlaceholder
+			}
+		default:
+			panic("Unsupported action: " + action)
+		}
+		sections[section] = append(sections[section], update)
+	}
+	sectionText := []string{}
+	for section, updates := range sections {
+		if len(updates) > 0 {
+			sectionText = append(sectionText, fmt.Sprintf("%s %s", section, strings.Join(updates, ", ")))
+		}
+	}
+	e.Text = strings.Join(sectionText, " ")
+	q.AddUpdateExpression(e)
+}
+
+func (q *UntypedQuery) AddExpected(attributes []Attribute) {
+	// You can't mix expressions and older mechanisms,
+	// so this reimplements Expected using ConditionExpression.
+	e := &Expression{
+		AttributeNames: map[string]string{},
+	}
+	terms := []string{}
+	attrIndex := 0
+	for _, a := range attributes {
+		namePlaceholder := fmt.Sprintf("#Expected%d", attrIndex)
+		valuePlaceholder := fmt.Sprintf(":Expected%d", attrIndex)
+		attrIndex++
+		e.AttributeNames[namePlaceholder] = a.Name
+
+		term := ""
+		if a.Exists == "false" {
+			term = fmt.Sprintf("attribute_not_exists (%s)", namePlaceholder)
+		} else {
+			term = fmt.Sprintf("%s = %s", namePlaceholder, valuePlaceholder)
+			renamedAttr := a
+			renamedAttr.Name = valuePlaceholder
+			e.AttributeValues = append(e.AttributeValues, renamedAttr)
+		}
+		terms = append(terms, term)
+	}
+	e.Text = strings.Join(terms, " AND ")
+	q.AddConditionExpression(e)
 }
 
 func attributeList(attributes []Attribute) msi {
 	b := msi{}
 	for _, a := range attributes {
-		//UGH!!  (I miss the query operator)
-		b[a.Name] = msi{a.Type: map[bool]interface{}{true: a.SetValues, false: a.Value}[a.SetType()]}
+		b[a.Name] = a.valueMsi()
 	}
 	return b
 }
 
-func (q *Query) addTable(t *Table) {
+func (q *UntypedQuery) addTable(t *Table) {
 	q.addTableByName(t.Name)
 }
 
-func (q *Query) addTableByName(tableName string) {
+func (q *UntypedQuery) addTableByName(tableName string) {
 	q.buffer["TableName"] = tableName
 }
 
-func (q *Query) String() string {
+func (q *UntypedQuery) String() string {
 	bytes, _ := json.Marshal(q.buffer)
 	return string(bytes)
 }
