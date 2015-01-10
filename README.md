@@ -1,7 +1,7 @@
 # Fork Deprecated
 As of January 9, 2015 `coreos/master` and `crowdmob/master` only
 differ in import paths and some changes to the README file. Because of
-this, we recommend you use (crowdmob's fork)[https://github.com/crowdmob/goamz].
+this, we recommend you use [crowdmob's fork](https://github.com/crowdmob/goamz).
 
 # GoAMZ
 
