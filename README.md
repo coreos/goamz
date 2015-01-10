@@ -1,9 +1,7 @@
-# News
-We are putting together plans for future changes. We obviously depend on all of you to take part in the planning for the future of goamz and execution of the plans. Other than the regulare 'issues' and 'pull requests' please also have a look at TODO.md.
-It is inevitable that there will be backward incompatible changes. Please subscribe to the google group to get all the news (it will only be used for announcements, all the technical discussions will happen on github).
-Google group: https://groups.google.com/forum/#!forum/goamz-announcements
-
-
+# Fork Deprecated
+As of January 9, 2015 `coreos/master` and `crowdmob/master` only
+differ in import paths and some changes to the README file. Because of
+this, we recommend you use (crowdmob's fork)[https://github.com/crowdmob/goamz].
 
 # GoAMZ
 
